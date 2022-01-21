@@ -48,6 +48,8 @@
 #include "CmLexer.h"
 #include <stdio.h>
 
+#define YYSTYPE PObject*
+
 class PObject;
 class MObject;
 class LxLexer:public CmLexer {

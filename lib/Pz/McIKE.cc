@@ -380,7 +380,7 @@ McISAKMP_Decrypted::calc_padlen(RControl &c,
 
 		if(padlen < sizeof(struct isakmp_gen)) {
 			fprintf(stderr,
-				"err: ISAKMP Pld_ISAKMP decode(%d) "
+				"err: ISAKMP Pld_ISAKMP decode(%lu) "
 				"over remain size(%d)\n",
 				sizeof(struct isakmp_gen), padlen);
 
@@ -390,7 +390,7 @@ McISAKMP_Decrypted::calc_padlen(RControl &c,
 
 		if(plen < sizeof(struct isakmp_gen)) {
 			fprintf(stderr,
-				"err: ISAKMP Pld_ISAKMP decode(%d) "
+				"err: ISAKMP Pld_ISAKMP decode(%ld) "
 				"over ISAKMP PayloadLength(%d)\n",
 				sizeof(struct isakmp_gen), plen);
 
@@ -404,7 +404,7 @@ McISAKMP_Decrypted::calc_padlen(RControl &c,
 
 		if(padlen < plen) {
 			fprintf(stderr,
-				"err: ISAKMP PayloadLength decode(%d) "
+				"err: ISAKMP PayloadLength decodu(%u) "
 				"over remain size(%d)\n",
 				plen, padlen);
 

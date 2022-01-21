@@ -44,13 +44,15 @@
  */
 #include <openssl/opensslv.h>
 #include <openssl/des.h>
+#include <openssl/modes.h>
+#include <openssl/hmac.h>
 #if defined(OPENSSL_VERSION_NUMBER)
 #	if ( OPENSSL_VERSION_NUMBER < 0x00903000)
 typedef const des_cblock DES_CBLOCK_IN;
 typedef des_cblock DES_CBLOCK_IO;
 #	else
-typedef des_cblock* DES_CBLOCK_IN;
-typedef des_cblock* DES_CBLOCK_IO;
+typedef DES_cblock* DES_CBLOCK_IN;
+typedef DES_cblock* DES_CBLOCK_IO;
 #	endif
 #endif
 

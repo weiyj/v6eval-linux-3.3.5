@@ -833,18 +833,18 @@ MvCookie64::generateOctetsWith(const PObjectList &a,
 
 	char cookie[EVP_MAX_MD_SIZE];
 
-	HMAC_CTX hmac_ctx;
-	HMAC_Init(&hmac_ctx, kcn.buffer(), kcn.length(), EVP_sha1());
+	HMAC_CTX *hmac_ctx = HMAC_CTX_new();
+	HMAC_Init_ex(hmac_ctx, kcn.buffer(), kcn.length(), EVP_sha1(), NULL);
 #ifdef RR_DBG
 xdmp("/tmp/rr_dbg.txt", "MvCookie64", "HMAC_Init(Kcn)",
 	kcn.buffer(), kcn.length());
 #endif	// RR_DBG
-	HMAC_Update(&hmac_ctx, (const unsigned char *)v6.buffer(), v6.length());
+	HMAC_Update(hmac_ctx, (const unsigned char *)v6.buffer(), v6.length());
 #ifdef RR_DBG
 xdmp("/tmp/rr_dbg.txt", "MvCookie64", "HMAC_Update(address)",
 	v6.buffer(), v6.length());
 #endif	// RR_DBG
-	HMAC_Update(&hmac_ctx,
+	HMAC_Update(hmac_ctx,
 		(const unsigned char *)nonce.buffer(), nonce.length());
 #ifdef RR_DBG
 xdmp("/tmp/rr_dbg.txt", "MvCookie64", "HMAC_Update(nonce)",
@@ -855,16 +855,16 @@ xdmp("/tmp/rr_dbg.txt", "MvCookie64", "HMAC_Update(nonce)",
 		one = 1;
 	}
 
-	HMAC_Update(&hmac_ctx, (const unsigned char *)&one, 1);
+	HMAC_Update(hmac_ctx, (const unsigned char *)&one, 1);
 #ifdef RR_DBG
 xdmp("/tmp/rr_dbg.txt", "MvCookie64", "HMAC_Update(one)", &one, 1);
 #endif	// RR_DBG
-	HMAC_Final(&hmac_ctx, (unsigned char *)cookie, &cookielen);
+	HMAC_Final(hmac_ctx, (unsigned char *)cookie, &cookielen);
 #ifdef RR_DBG
 xdmp("/tmp/rr_dbg.txt", "MvCookie64", "HMAC_Final(keygen token)",
 	cookie, COOKIE_LEN);
 #endif	// RR_DBG
-	HMAC_cleanup(&hmac_ctx);
+	HMAC_CTX_free(hmac_ctx);
 
 	oct.set(COOKIE_LEN);
 	memcpy(oct.buffer(), cookie, COOKIE_LEN);
@@ -998,7 +998,7 @@ MfBSA::generateOctetsWith(const PObjectList &, PvOctets &oct, WObject *) const
 OCTSTR
 MfBSA::init(OCTSTR cp, const PObjectList &a) const
 {
-	HMAC_CTX *ctx = cp? (HMAC_CTX *)cp: new HMAC_CTX;
+	HMAC_CTX *ctx = cp? (HMAC_CTX *)cp: HMAC_CTX_new();
 
 	COCTSTR key = 0;
 	uint32_t keylen = 0;
@@ -1014,7 +1014,7 @@ MfBSA::init(OCTSTR cp, const PObjectList &a) const
 		keylen = kbu.length();
 	}
 
-	HMAC_Init(ctx, (OCTSTR)key, keylen, EVP_sha1());
+	HMAC_Init_ex(ctx, (OCTSTR)key, keylen, EVP_sha1(), NULL);
 #ifdef RR_DBG
 xdmp("/tmp/rr_dbg.txt", "MfBSA", "HMAC_Init(Kbm)", key, keylen);
 #endif	// RR_DBG
@@ -1074,7 +1074,7 @@ xdmp("/tmp/rr_dbg.txt", "MfBSA", "HMAC_Final(Authenticator)", m, len);
 	OCTSTR os = rc->buffer();
 
 	memcpy(os, m, AUTHENTICATOR_LEN);
-	HMAC_cleanup(ctx);
+	HMAC_CTX_free(ctx);
 
 	return(rc);
 }
@@ -1104,7 +1104,7 @@ bool MfDHCPAuth::generateOctetsWith(const PObjectList &a, PvOctets &oct, WObject
 }
 
 OCTSTR MfDHCPAuth::init(OCTSTR cp, const PObjectList &a) const {
-	HMAC_CTX *ctx = cp != 0 ? (HMAC_CTX *)cp : new HMAC_CTX;
+	HMAC_CTX *ctx = cp != 0 ? (HMAC_CTX *)cp : HMAC_CTX_new();
 	bool ok = true;
 	COCTSTR key = 0;
 	uint32_t keylen = 0;
@@ -1113,7 +1113,7 @@ OCTSTR MfDHCPAuth::init(OCTSTR cp, const PObjectList &a) const {
 		keylen = a[0]->length();
 	}
 
-	HMAC_Init(ctx, (OCTSTR)key, keylen, EVP_md5());
+	HMAC_Init_ex(ctx, (OCTSTR)key, keylen, EVP_md5(), NULL);
 
 #ifdef DHCP_DBG
 xdmp("/tmp/dhcp_dbg.txt", "MfDHCPAuth", "key", key, keylen);
@@ -1146,7 +1146,7 @@ PvOctets *MfDHCPAuth::result(OCTSTR cp, const PObjectList &) const {
 xdmp("/tmp/dhcp_dbg.txt", "MfDHCPAuth", "m", m, DHCP_HMAC_MD5);
 #endif	// DHCP_DBG
 
-	HMAC_cleanup(ctx);
+	HMAC_CTX_free(ctx);
 
 	return(rc);
 }
@@ -1722,8 +1722,9 @@ MvP1_HASH::generateOctetsWith(const PObjectList &a,
 	////////////////////////////////
 	// SKEYID                     //
 	////////////////////////////////
-	HMAC_CTX ctx;
-	memset(&ctx, 0, sizeof(ctx));
+	HMAC_CTX *ctx = HMAC_CTX_new();
+
+	memset(ctx, 0, sizeof(ctx));
 
         PObject *SKEYID		= a[1];
 
@@ -1736,7 +1737,7 @@ MvP1_HASH::generateOctetsWith(const PObjectList &a,
 	COCTSTR key		= skeyid.buffer();
 	uint32_t key_len	= skeyid.length();
 
-	HMAC_Init(&ctx, key, key_len, evp_md);
+	HMAC_Init_ex(ctx, key, key_len, evp_md, NULL);
 #ifdef ISAKMP_DBG
 xdmp("/tmp/isakmp_dbg.txt", "MvP1_HASH", "HMAC_Init(SKEYID)", key, key_len);
 #endif	// ISAKMP_DBG
@@ -1757,7 +1758,7 @@ xdmp("/tmp/isakmp_dbg.txt", "MvP1_HASH", "HMAC_Init(SKEYID)", key, key_len);
 		COCTSTR data	= pv.buffer();
 		uint32_t len	= pv.length();
 
-		HMAC_Update(&ctx, data, len);
+		HMAC_Update(ctx, data, len);
 #ifdef ISAKMP_DBG
 {
 unsigned int idx = d - 2;
@@ -1801,7 +1802,7 @@ xdmp("/tmp/isakmp_dbg.txt", "MvP1_HASH", keyword[idx], data, len);
 		COCTSTR data	= pv.buffer() + ISAKMP_PAYLOAD_BODY_OFFSET;
 		uint32_t len	= pv.length() - ISAKMP_PAYLOAD_BODY_OFFSET;
 
-		HMAC_Update(&ctx, data, len);
+		HMAC_Update(ctx, data, len);
 #ifdef ISAKMP_DBG
 {
 unsigned int idx = d - 6;
@@ -1820,7 +1821,7 @@ xdmp("/tmp/isakmp_dbg.txt", "MvP1_HASH", keyword[idx], data, len);
 	uint32_t md_len	= EVP_MAX_MD_SIZE;
 	octet md[EVP_MAX_MD_SIZE];
 
-	HMAC_Final(&ctx, md, &md_len);
+	HMAC_Final(ctx, md, &md_len);
 #ifdef ISAKMP_DBG
 xdmp("/tmp/isakmp_dbg.txt", "MvP1_HASH", "HMAC_Final(HASH_I, HASH_R)",
 	md, md_len);
@@ -1828,7 +1829,7 @@ xdmp("/tmp/isakmp_dbg.txt", "MvP1_HASH", "HMAC_Final(HASH_I, HASH_R)",
 	oct.set(md_len);
 	memcpy(oct.buffer(), md, md_len);
 
-	HMAC_cleanup(&ctx);
+	HMAC_CTX_free(ctx);
 
 	return(true);
 }
@@ -2133,7 +2134,7 @@ MvP2_HASH_2::generateOctetsWith(const PObjectList &a,
 OCTSTR
 MvP2_HASH_2::init(OCTSTR cp, const PObjectList &a) const
 {
-	HMAC_CTX *ctx = cp? (HMAC_CTX *)cp: new HMAC_CTX;
+	HMAC_CTX *ctx = cp? (HMAC_CTX *)cp: HMAC_CTX_new();
 
 	//----------------------------//
         // 1st argument - algorithm   //
@@ -2170,7 +2171,7 @@ MvP2_HASH_2::init(OCTSTR cp, const PObjectList &a) const
 		keylen	= skeyid_a.length();
 	}
 
-	HMAC_Init(ctx, (OCTSTR)key, keylen, evp_md);
+	HMAC_Init_ex(ctx, (OCTSTR)key, keylen, evp_md, NULL);
 #ifdef ISAKMP_DBG
 xdmp("/tmp/isakmp_dbg.txt", "MvP2_HASH_2", "HMAC_Init(SKEYID_a)", key, keylen);
 #endif	// ISAKMP_DBG

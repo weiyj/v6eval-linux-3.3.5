@@ -184,20 +184,20 @@ OCTBUF* MfCrypt::decryptOctets(const OCTBUF& cipher,const PObjectList& a,
 #include <openssl/des.h>
 //----------------------------------------------------------------------
 // DESCBC CRYPT ALGORITHM
-void MfDESCBC::scheduleKeys(const PObject* key,des_key_schedule& schd) const {
+void MfDESCBC::scheduleKeys(const PObject* key,DES_key_schedule *schd) const {
 	bool ok=true;
 	COCTSTR keys=key->octetsValue(ok);
-	des_key_sched((DES_CBLOCK_IN)keys,schd);}
+	DES_key_sched((DES_CBLOCK_IN)keys,schd);}
 
 void MfDESCBC::encrypt(OCTSTR os,OCTSTR is,uint32_t l,const PObject* key,OCTSTR iv) const {
-	des_key_schedule schd;
-	scheduleKeys(key,schd);
-	des_cbc_encrypt(is,os,l,schd,(DES_CBLOCK_IO)iv,DES_ENCRYPT);}
+	DES_key_schedule schd;
+	scheduleKeys(key,&schd);
+	DES_cbc_encrypt(is,os,l,&schd,(DES_CBLOCK_IO)iv,DES_ENCRYPT);}
 
 void MfDESCBC::decrypt(OCTSTR os,OCTSTR is,uint32_t l,const PObject* key,OCTSTR iv) const {
-	des_key_schedule schd;
-	scheduleKeys(key,schd);
-	des_cbc_encrypt(is,os,l,schd,(DES_CBLOCK_IO)iv,DES_DECRYPT);}
+	DES_key_schedule schd;
+	scheduleKeys(key,&schd);
+	DES_cbc_encrypt(is,os,l,&schd,(DES_CBLOCK_IO)iv,DES_DECRYPT);}
 
 #include <openssl/blowfish.h>
 //----------------------------------------------------------------------
@@ -257,23 +257,23 @@ void MfCAST128::decrypt(OCTSTR os,OCTSTR is,uint32_t l,const PObject* key,OCTSTR
 
 //----------------------------------------------------------------------
 // DES3CBC CRYPT ALGORITHM
-void MfDES3CBC::scheduleKeys(const PObject* key,des_key_schedule& schd0,
-		des_key_schedule& schd1,des_key_schedule& schd2) const{
+void MfDES3CBC::scheduleKeys(const PObject* key,DES_key_schedule& schd0,
+		DES_key_schedule& schd1,DES_key_schedule& schd2) const{
 	bool ok=true;
 	COCTSTR keys=key->octetsValue(ok);
-	des_key_sched((DES_CBLOCK_IN)keys,schd0);
-	des_key_sched((DES_CBLOCK_IN)(keys+8),schd1);
-	des_key_sched((DES_CBLOCK_IN)(keys+16),schd2);}
+	DES_key_sched((DES_CBLOCK_IN)keys,&schd0);
+	DES_key_sched((DES_CBLOCK_IN)(keys+8),&schd1);
+	DES_key_sched((DES_CBLOCK_IN)(keys+16),&schd2);}
 
 void MfDES3CBC::encrypt(OCTSTR os,OCTSTR is,uint32_t l,const PObject* key,OCTSTR iv) const {
-	des_key_schedule schd0,schd1,schd2;
+	DES_key_schedule schd0,schd1,schd2;
 	scheduleKeys(key,schd0,schd1,schd2);
-	des_ede3_cbc_encrypt(is,os,l,schd0,schd1,schd2,(DES_CBLOCK_IO)iv,DES_ENCRYPT);}
+	DES_ede3_cbc_encrypt(is,os,l,&schd0,&schd1,&schd2,(DES_CBLOCK_IO)iv,DES_ENCRYPT);}
 
 void MfDES3CBC::decrypt(OCTSTR os,OCTSTR is,uint32_t l,const PObject* key,OCTSTR iv) const {
-	des_key_schedule schd0,schd1,schd2;
+	DES_key_schedule schd0,schd1,schd2;
 	scheduleKeys(key,schd0,schd1,schd2);
-	des_ede3_cbc_encrypt(is,os,l,schd0,schd1,schd2,(DES_CBLOCK_IO)iv,DES_DECRYPT);}
+	DES_ede3_cbc_encrypt(is,os,l,&schd0,&schd1,&schd2,(DES_CBLOCK_IO)iv,DES_DECRYPT);}
 
 extern "C" {
 #include <crypto/rijndael/rijndael.h>
@@ -390,7 +390,7 @@ MfAES_CTR::encrypt(OCTSTR os,
 
 	AES_set_encrypt_key(keys, bits, (AES_KEY *)&k);
 
-	AES_ctr128_encrypt(is, os, length, &k, &ctrblk.bytes[0], ecount_buf, &num);
+	CRYPTO_ctr128_encrypt(is, os, length, &k, &ctrblk.bytes[0], ecount_buf, &num, (block128_f)AES_encrypt);
 
 #ifdef AESCTR_DBG
 xdbg("/tmp/aesctr_dbg.txt", "MfIKE_DES3CBC", "l: %ld\n", l);
@@ -598,14 +598,14 @@ MfAES_CTR_2::decryptOctets(const OCTBUF &cipher,
 //----------------------------------------------------------------------
 // HMAC AUTHENTIFICATION ALGORITHM
 OCTSTR MfHMAC::init(OCTSTR cp,const PObjectList& a) const {
-	HMAC_CTX* ctx=cp!=0?(HMAC_CTX*)cp:new HMAC_CTX;
+	HMAC_CTX* ctx=cp!=0?(HMAC_CTX*)cp:HMAC_CTX_new();
 	bool ok=true;
 	COCTSTR key=0;
 	uint32_t keylen=0;
 	if(a.size()>0) {
 		key=a[0]->octetsValue(ok);
 		keylen=a[0]->length();}
-	HMAC_Init(ctx,(OCTSTR)key,keylen,evp());
+	HMAC_Init_ex(ctx,(OCTSTR)key,keylen,evp(), NULL);
 	return (OCTSTR)ctx;}
 
 void
@@ -645,7 +645,7 @@ PvOctets* MfHMAC::result(OCTSTR cp,const PObjectList&) const {
 	PvOctets* rc=new PvOctets(icvlen);
 	OCTSTR os=rc->buffer();
 	memcpy(os,m,icvlen);
-	HMAC_cleanup(ctx);
+	HMAC_CTX_free(ctx);
 	return rc;}
 
 //----------------------------------------------------------------------
@@ -1675,7 +1675,7 @@ MfHMACMD5_2::checkArgument(const PFunction &o,const PObjectList &a) const
 OCTSTR
 MfHMACMD5_2::init(OCTSTR cp, const PObjectList &a) const
 {
-	HMAC_CTX *ctx = cp != 0? (HMAC_CTX*)cp: new HMAC_CTX;
+	HMAC_CTX *ctx = cp != 0? (HMAC_CTX*)cp: HMAC_CTX_new();
 	COCTSTR key = 0;
 	uint32_t keylen = 0;
 	PvOctets hash_key;
@@ -1689,7 +1689,7 @@ MfHMACMD5_2::init(OCTSTR cp, const PObjectList &a) const
 		}
 	}
 
-	HMAC_Init(ctx, (OCTSTR)key, keylen, evp());
+	HMAC_Init_ex(ctx, (OCTSTR)key, keylen, evp(), NULL);
 #ifdef ISAKMP_DBG
 xdmp("/tmp/isakmp_dbg.txt", "MfHMACMD5_2", "HMAC_Init(key)", key, keylen);
 #endif	// ISAKMP_DBG
@@ -1742,7 +1742,7 @@ MfHMACSHA1_2::checkArgument(const PFunction &o,const PObjectList &a) const
 OCTSTR
 MfHMACSHA1_2::init(OCTSTR cp, const PObjectList &a) const
 {
-	HMAC_CTX *ctx = cp != 0? (HMAC_CTX*)cp: new HMAC_CTX;
+	HMAC_CTX *ctx = cp != 0? (HMAC_CTX*)cp: HMAC_CTX_new();
 
 	COCTSTR key = 0;
 	uint32_t keylen = 0;
@@ -1757,7 +1757,7 @@ MfHMACSHA1_2::init(OCTSTR cp, const PObjectList &a) const
 		}
 	}
 
-	HMAC_Init(ctx, (OCTSTR)key, keylen, evp());
+	HMAC_Init_ex(ctx, (OCTSTR)key, keylen, evp(), NULL);
 #ifdef ISAKMP_DBG
 xdmp("/tmp/isakmp_dbg.txt", "MfHMACSHA1_2", "HMAC_Init(key)", key, keylen);
 #endif	// ISAKMP_DBG

@@ -234,7 +234,7 @@ class MfDESCBC:public MfCryptKey {
 public:
 	MfDESCBC(CSTR,uint8_t,uint8_t,uint8_t);
 virtual	~MfDESCBC();
-	void scheduleKeys(const PObject*,des_key_schedule&) const;
+	void scheduleKeys(const PObject*,DES_key_schedule*) const;
 virtual	void encrypt(OCTSTR,OCTSTR,uint32_t,const PObject*,OCTSTR) const;
 virtual	void decrypt(OCTSTR,OCTSTR,uint32_t,const PObject*,OCTSTR) const;
 };
@@ -277,7 +277,7 @@ public:
 	MfDES3CBC(CSTR,uint8_t,uint8_t,uint8_t);
 virtual	~MfDES3CBC();
 	void scheduleKeys(const PObject*,
-		des_key_schedule&,des_key_schedule&,des_key_schedule&) const;
+		DES_key_schedule&,DES_key_schedule&,DES_key_schedule&) const;
 virtual	void encrypt(OCTSTR,OCTSTR,uint32_t,const PObject*,OCTSTR) const;
 virtual	void decrypt(OCTSTR,OCTSTR,uint32_t,const PObject*,OCTSTR) const;
 };

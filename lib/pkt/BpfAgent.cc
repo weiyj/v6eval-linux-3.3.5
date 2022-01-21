@@ -47,7 +47,11 @@
 #include <sys/types.h>
 #include <sys/time.h>
 #include <sys/ioctl.h>
+#if defined(__linux__)
+#include "bpf.h"
+#else
 #include <net/bpf.h>
+#endif
 #include <stdlib.h>
 #include <string.h>
 #include "debug.h"
@@ -63,7 +67,7 @@ BpfAgent::BpfAgent(CSTR n,int32_t rbsize):filter_(n),buffer_(0),runStat_(eStop_)
 		struct bpf_insn insns[] = {
 			BPF_STMT(BPF_LD+BPF_H+BPF_ABS, 12),
 			BPF_JUMP(BPF_JMP+BPF_JEQ+BPF_K, 0x86dd, 0, 1),
-			BPF_STMT(BPF_RET+BPF_K, (u_int)-1),  // accept
+			BPF_STMT(BPF_RET+BPF_K, -1),  // accept
 			BPF_STMT(BPF_RET+BPF_K, 0),          // ignore
 		};
 		v6filter.bf_len = 4;
@@ -212,7 +216,7 @@ bufStat BpfAgent::stat() const{
 	return rc;}
 
 void BpfAgent::clear() {
-#if 1
+#if ! defined(__linux__)
 	/*
 	  In rare case, clear() function is called before filterd out
 	  all sent packets. So need to wait all sent packets filtered
@@ -226,6 +230,9 @@ xdbg("/tmp/vclear_dbg.txt", "BpfAgent", "this: %p\n", this);
 #endif	// VCLEAR_DBG
 		nonblock_receive(0);
 	}
+#else
+	while(!fifo.IsEmpty())
+		fifo.del();
 #endif
 	rbuf->clear();
 	filter_.flush();}

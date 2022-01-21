@@ -46,6 +46,7 @@
 #define ApplicationLexer LxLexer 
 //----------------------------------------------------------------------
 // LEX MAIN ROUTINE
+#define YYSTYPE_IS_DECLARED
 #include "LxLexer.h"
 #include "LxToken.h"
 #include "PzParse.h"

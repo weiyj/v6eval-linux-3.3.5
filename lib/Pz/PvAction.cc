@@ -55,7 +55,7 @@ PvAction::PvAction(const PvAction& x):PvObject(x),meta_(x.meta_) {}
 PvAction::~PvAction() {}
 void PvAction::print() const {
 	CSTR s=meta()->string();
-	printf(s);}
+	printf("%s", s);}
 
 //======================================================================
 PvAUTO::PvAUTO(const MObject* m,CSTR f,int l):PvAction(m,f,l){}
